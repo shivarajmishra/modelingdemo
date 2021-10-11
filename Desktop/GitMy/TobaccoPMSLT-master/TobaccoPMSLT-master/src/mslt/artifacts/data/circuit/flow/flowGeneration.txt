@@ -1,0 +1,25 @@
+agecategory X means ages X to X+4
+
+Generate age cohorts 2,7,12,17,...97,102,107
+
+ - Sum cs and cscv in prevalence.csv to get total smoking prevalence.
+ - If my age is less than 20,
+	Assume starting year 0 and use dataFilePre.csv for the youngest cohort of this sex by strata.
+Otherwise
+	Use the prevelance to look up the appropriate dataFilePre.csv. Match the value to totalSmoke to get a starting year.
+ - Copy the next 21 entries to the appropriate age cohort in dataFile.csv.
+ - Reindex dataFile.csv from age cohorts and year since simulation start, to what happens to people of particular ages per year.
+ - Write cs.csv and cscv.csv with these reindexed values.
+
+So eg.
+ - year 0 for 52 year olds is written in year_start 0, agecategory 50 because they are 52
+ - year 1 for 52 year olds is written in year_start 1, agecategory 50 because they are 53
+ - year 2 for 52 year olds is written in year_start 2, agecategory 50 because they are 54
+ - year 3 for 52 year olds is written in year_start 3, agecategory 55 because they are 55
+ - year 4 for 52 year olds is written in year_start 4, agecategory 55 because they are 56
+ - year 5 for 52 year olds is written in year_start 5, agecategory 55 because they are 57
+
+Problems.
+ - Rows of cs.csv and cscv.csv cannot sum to more than 1.
+ - Values in cs.csv and cscv.csv cannot be negative.
+ - 

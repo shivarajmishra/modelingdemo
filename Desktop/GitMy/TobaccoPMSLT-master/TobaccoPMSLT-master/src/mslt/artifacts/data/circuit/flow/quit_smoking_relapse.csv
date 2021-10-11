@@ -1,0 +1,13 @@
+sex,strata,agecategory,QuitSmokingRelapse,QuitVapeProp
+male,non-maori,0,0,0
+male,non-maori,20,0,0.221
+male,non-maori,45,0,0.205
+male,maori,0,0,0
+male,maori,20,0,0.221
+male,maori,45,0,0.205
+female,non-maori,0,0,0
+female,non-maori,20,0,0.221
+female,non-maori,45,0,0.205
+female,maori,0,0,0
+female,maori,20,0,0.221
+female,maori,45,0,0.205

@@ -1,0 +1,350 @@
+"""Build disease-specific data tables."""
+
+import logging
+import pandas as pd
+import numpy as np
+import pathlib
+
+from .uncertainty import sample_column_long, sample_fixed_rate_from
+from mslt.utilities import UnstackDraw
+import mslt.utilities as util
+
+def sample_disease_rate_from(year_start, year_end, data, rate_name, apc_data,
+							 num_apc_years, rate_dist, apc_dist,
+							 rate_samples, apc_samples):
+	"""
+	Draw correlated samples for a rate at each year.
+
+	:param year_start: The year at which the simulation starts.
+	:param year_end: The year at which the simulation ends.
+	:param data: The data table that contains the rate values.
+	:param rate_name: The column name that defines the mean values.
+	:param apc_data: The data table that contains the annual percent changes
+		(set to ``None`` if there are no changes).
+	:param num_apc_years: The number of years over which the annual percent
+		changes apply (measured from the start of the simulation).
+	:param rate_dist: The uncertainty distribution for the rate values.
+	:param apc_dist: The uncertainty distribution for the annual percent
+		change in this rate.
+	:param rate_samples: Samples drawn from the half-open interval [0, 1).
+	:param apc_samples: Samples drawn from the half-open interval [0, 1).
+	"""
+	value_col = rate_name
+
+	# Sample the initial rate for each cohort.
+	df = sample_column_long(data, value_col, rate_dist, rate_samples)
+
+	df.insert(0, 'year_start', 0)
+	df.insert(1, 'year_end', 0)
+
+	df_index_cols = ['year_start', 'year_end', 'age', 'sex', 'strata', 'draw']
+	apc_index_cols = ['age', 'sex', 'strata']
+
+	tables = []
+	years = range(int(year_start), int(year_end + 1))
+
+	if apc_data is not None and value_col in apc_data.columns:
+		# Sample the annual percent change for each cohort.
+		apc = apc_data.loc[:, apc_index_cols + [value_col]]
+		# NOTE: this now adds a new column, 'draw'.
+		apc = sample_column_long(apc, value_col, apc_dist, apc_samples)
+
+		draw_columns = [c for c in apc.columns if c not in apc_index_cols + ['draw']]
+		data_columns = [c for c in df.columns if c not in df_index_cols]
+		if set(draw_columns) != set(data_columns):
+			raise ValueError('Inconsistent disease parameter draws')
+
+		base_values = df.loc[:, draw_columns].copy().values
+		apc_values = apc.loc[:, draw_columns].copy().values
+
+		# Calculate the correlated samples for each cohort at each year.
+		for counter, year in enumerate(years):
+			df['year_start'] = year
+			if counter <= num_apc_years:
+				df['year_end'] = year + 1
+				timespan = year - year_start
+				scale = np.exp(apc_values * timespan)
+				df.loc[:, draw_columns] = base_values * scale
+				tables.append(df.copy())
+			else:
+				df['year_end'] = year_end + 1
+				tables.append(df.copy())
+				break
+
+		df = pd.concat(tables)
+
+	else:
+		df['year_start'] = year_start
+		df['year_end'] = year_end + 1
+
+	# Replace 'age' with age groups.
+	df = df.rename(columns={'age': 'age_start'})
+	df.insert(df.columns.get_loc('age_start') + 1,
+			  'age_end',
+			  df['age_start'] + 1)
+
+	df = UnstackDraw(df)
+	return df
+
+
+class Chronic:
+
+	def __init__(self, name, year_start, year_end, data, apc=None):
+		self._name = name
+		self._year_start = year_start
+		self._year_end = year_end
+		self._num_apc_years = 15
+
+		data = self._build_data_table(data)
+		if apc is not None:
+			apc = self._build_apc_table(apc, data['age'].min(),
+										data['age'].max())
+
+		self._data = data
+		self._apc = apc
+
+	def _build_data_table(self, data):
+		# NOTE: the name of the remission column was spelt incorrectly for
+		# stomach cancer, which prevented it from being renamed to 'r' and
+		# ultimately caused it to have a remission rate of zero.
+		if 'Remsision' in data.columns:
+			data = data.rename(columns={'Remsision': 'Remission'})
+		data = data.rename(columns={
+			'Incidence': 'i',
+			'prevalence': 'prev',
+			'Case Fatality': 'f',
+			'Remission': 'r',
+		})
+		if 'r' not in data.columns:
+			data['r'] = 0.0 * data['i'].astype(float)
+
+		value_cols = [
+			'i', 'prev', 'f', 'r', 'DR',
+			'expenditure_rate', 'expenditure_rate_first', 'expenditure_rate_last',
+			'income', 'income_first', 'income_last'
+		]
+		keep_cols = ['age', 'sex', 'strata'] + value_cols
+		if 'strata' not in data.columns:
+			data = util.AddStrata(data.set_index(['age', 'sex'])).reset_index()
+		data.loc[:, value_cols] = data.loc[:, value_cols].astype(float).fillna(0)
+		data = data.loc[:, keep_cols]
+		data = data.sort_values(['age', 'sex', 'strata']).reset_index(drop=True)
+		return data
+
+	def _build_apc_table(self, apc, age_min, age_max):
+		prefix = '{}_'.format(self._name)
+		apc.columns = [
+			c[len(prefix):] if c.startswith(prefix) else c
+			for c in apc.columns
+		]
+
+		tables = []
+		for age in range(age_min, age_max + 1):
+			apc['age'] = age
+			if 'strata' not in apc.columns:
+				apc = util.AddStrata(apc.set_index(['age', 'sex'])).reset_index()
+			tables.append(apc.copy())
+		
+		apc = pd.concat(tables).sort_values(['age', 'sex', 'strata'])
+		apc = apc.reset_index(drop=True)
+		return apc
+
+	def get_expected_rates(self):
+		# NOTE: need to do this separately for each rate, since some rates
+		# may have APCs and other rates will not.
+		years = range(self._year_start, self._year_end + 1)
+		tables = []
+		df_tmp = self._data.copy()
+
+		if self._apc is None:
+			df_tmp['year_start'] = self._year_start
+			df_tmp['year_end'] = self._year_end + 1
+			tables.append(df_tmp.copy())
+		else:
+			modify_rates = [
+				c for c in self._apc.columns
+				if c in df_tmp.columns and c in ['i', 'r', 'f']
+			]
+			base_rates = self._data.loc[:, modify_rates]
+			for counter, year in enumerate(years):
+				df_tmp['year_start'] = year
+				if counter <= self._num_apc_years:
+					df_tmp['year_end'] = year + 1
+					timespan = year - self._year_start
+					scale = np.exp(self._apc.loc[:, modify_rates].values * timespan)
+					df_tmp.loc[:, modify_rates] = base_rates.values * scale
+					tables.append(df_tmp.copy())
+				else:
+					df_tmp['year_end'] = self._year_end + 1
+					tables.append(df_tmp.copy())
+					break
+
+		df = pd.concat(tables).sort_values(['year_start', 'age', 'sex', 'strata'])
+		df = df.reset_index(drop=True)
+
+		# Replace 'age' with age groups.
+		df = df.rename(columns={'age': 'age_start'})
+		df.insert(df.columns.get_loc('age_start') + 1,
+				  'age_end',
+				  df['age_start'] + 1)
+		df = df.rename(columns={'i': 'value','r': 'value','f': 'value'})
+		return df
+
+	def sample_from(self, col, rate_dist, apc_dist, rate_samples, apc_samples):
+		"""Sample the col rate."""
+		df = sample_disease_rate_from(self._year_start, self._year_end,
+									  self._data, col,
+									  self._apc, self._num_apc_years,
+									  rate_dist, apc_dist,
+									  rate_samples, apc_samples)
+		df = df.rename(columns={col: 'value'})
+		return df
+
+
+	def sample_prevalence_from(self, rate_dist, rate_samples):
+		"""Sample the initial prevalence of disease."""
+		df = sample_column_long(self._data, 'prev', rate_dist, rate_samples)
+		df.insert(0, 'year_start', self._year_start)
+		df.insert(1, 'year_end', self._year_start + 1)
+		df = df.rename(columns={'age': 'age_start'})
+		df.insert(df.columns.get_loc('age_start') + 1,
+				  'age_end',
+				  df['age_start'] + 1)
+		df = df.rename(columns={'prev': 'value'})
+		df = UnstackDraw(df)
+		return df
+
+
+class Acute:
+
+	def __init__(self, name, year_start, year_end, data):
+		self._name = name
+		self._data = self._build_data_table(data)
+		self._year_start = year_start
+		self._year_end = year_end
+
+	def _build_data_table(self, data):
+		data = data.rename(columns={
+			'Mortality': 'excess_mortality',
+			'DR': 'disability_rate',
+		})
+
+		value_cols = ['excess_mortality', 'disability_rate','expenditure_rate', 'income']
+		keep_cols = ['age', 'sex', 'strata'] + value_cols
+		if 'strata' not in data.columns:
+			data = util.AddStrata(data.set_index(['age', 'sex'])).reset_index()
+		
+		data.loc[:, value_cols] = data.loc[:, value_cols].astype(float)
+		data = data.loc[:, keep_cols]
+		data = data.sort_values(['age', 'sex', 'strata']).reset_index(drop=True)
+		return data
+
+	def get_expected_rates(self):
+		years = range(self._year_start, self._year_end + 1)
+		tables = []
+		df = self._data.copy()
+
+		df = df.rename(columns={'age': 'age_start'})
+		df.insert(df.columns.get_loc('age_start') + 1,
+					  'age_end',
+					  df['age_start'] + 1)
+
+		df.insert(0, 'year_start', self._year_start)
+		df.insert(1, 'year_end', self._year_end + 1)
+
+		df = UnstackDraw(df)
+
+		return df
+
+	def sample_from(self, col, rate_dist, samples):
+		"""Sample the col rate."""
+		df = sample_fixed_rate_from(self._year_start, self._year_end,
+									self._data, col, rate_dist, samples)
+		df = UnstackDraw(df)
+		df = df.rename(columns={col : 'value'})
+		return df
+
+
+class Diseases:
+
+	def __init__(self, data_dir, year_start, year_end):
+		self._year_start = year_start
+		self._year_end = year_end
+		self.data_dir = '{}/diseases/'.format(data_dir)
+		self.load_diseases_data()
+
+	def load_diseases_data(self):
+		logger = logging.getLogger(__name__)
+
+		self.chronic = {}
+		self.acute = {}
+
+		rate_suffix = 'rates.csv'
+		apc_suffix = 'apc.csv'
+		strip_ix = len(rate_suffix) + 1
+
+		chronic_cols = [
+			'age', 'sex', 'strata', 'i', 'prev', 'f', 'r', 'DR',
+			'expenditure_rate', 'expenditure_rate_first', 'expenditure_rate_last', 
+			'income', 'income_first', 'income_last', 
+		]
+		acute_cols = ['age', 'sex', 'strata', 'excess_mortality', 'disability_rate', 'expenditure_rate', 'income']
+
+		p = pathlib.Path(self.data_dir + 'shared/')
+		rate_paths = sorted(p.glob('*_{}'.format(rate_suffix)))
+		
+		for rate_path in rate_paths:
+			disease_name = str(rate_path.name)[:-strip_ix]
+			print('setup {}'.format(disease_name))
+
+			df_rates = pd.read_csv(rate_path)
+			df_rates = util.AddStrata(df_rates.set_index(['age', 'sex']))
+			df_rates_strata = pd.DataFrame()
+			for strata in util.GetStrata():
+				path = pathlib.Path(self.data_dir + '{}/{}_rates.csv'.format(strata, disease_name))
+				df_strata = pd.read_csv(path)
+				df_strata = util.AddToIndex(df_strata.set_index(['age', 'sex']), 'strata', strata)
+				df_rates_strata = df_rates_strata.append(df_strata)
+
+			df_rates = df_rates.join(df_rates_strata).reset_index()
+
+			if all(c in chronic_cols for c in df_rates.columns):
+				# Chronic disease, check for annual percent changes.
+				prefix = str(rate_path)[:-strip_ix]
+				apc_file = '{}_{}'.format(prefix, apc_suffix)
+				apc_path = pathlib.Path(apc_file)
+				if apc_path.exists():
+					df_apc = pd.read_csv(apc_path)
+					df_apc = util.AddStrata(df_apc.set_index(['sex']))
+				else:
+					df_apc = None
+				
+				df_apc_strata = None
+				for strata in util.GetStrata():
+					path = pathlib.Path(self.data_dir + '{}/{}_apc.csv'.format(strata, disease_name))
+					if path.exists():
+						df_strata = pd.read_csv(path)
+						df_strata = util.AddToIndex(df_strata.set_index(['sex']), 'strata', strata)
+						if df_apc_strata is None:
+							df_apc_strata = pd.DataFrame()
+						df_apc_strata = df_apc_strata.append(df_strata)
+
+				if df_apc_strata is not None:
+					if df_apc is None:
+						df_apc = df_apc_strata
+					else:
+						df_apc = df_apc.append(df_apc_strata)
+				if df_apc is not None:
+					df_apc = df_apc.reset_index()
+
+				self.chronic[disease_name] = Chronic(
+					disease_name, self._year_start, self._year_end,
+					df_rates, df_apc)
+			elif all(c in acute_cols for c in df_rates.columns):
+				# Acute disease
+				self.acute[disease_name] = Acute(
+					disease_name, self._year_start, self._year_end, df_rates)
+
+			else:
+				# Warn the user and ignore this file.
+				logger.warning('Invalid disease file %s', rate_path)

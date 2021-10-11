@@ -1,0 +1,196 @@
+components:
+    mslt:
+        components:
+            circuit:
+                - Circuit()
+            population:
+                - BasePopulation()
+                - Mortality()
+                - Disability()
+                - Expenditure()
+                - Income()
+            disease:
+                - Disease('bladder_cancer')
+                - Disease('cervical_cancer')
+                - Disease('colorectal_cancer')
+                - Disease('copd')
+                - Disease('diabetes')
+                - Disease('endometrial_cancer')
+                - Disease('ihd')
+                - Disease('kidney_cancer')
+                - Disease('liver_cancer')
+                - AcuteDisease('lrti')
+                - Disease('lung_cancer')
+                - Disease('melanoma')
+                - Disease('mouth_oropharynx_cancer')
+                - Disease('oesophagus_cancer')
+                - Disease('pancreas_cancer')
+                - Disease('stomach_cancer')
+                - Disease('stroke')
+                - Disease('thyroid_cancer')
+            magic_wand_components:
+                - GenericWand('wand01')
+                - GenericWand('wand02')
+                - GenericWand('wand03')
+                - GenericWand('wand04')
+                - GenericWand('wand05')
+                - GenericWand('wand06')
+                - GenericWand('ceaseinc01')
+                - GenericWand('ceaseinc02')
+                - GenericWand('ceaseinc03')
+                - GenericWand('ceaseinc04')
+            observer:
+                - MorbidityMortality()
+                - Circuit()
+
+configuration:
+    expenditure: True
+    income: True
+    input_data:
+        artifact_path: ../artifacts/pmslt_artifact.hdf
+        input_draw_number: 0
+        location: ''
+    interpolation:
+        validate: False
+    population:
+        # The population size here is the number of cohorts.
+        # There are 22 age bins (0-4, 5-9, ..., 105-109) for females and for
+        # males for each strata, making a total of 88 cohorts.
+        population_size: 440
+        max_age: 110
+        strata: ['maori', 'non-maori']
+    circuit:
+        prevalence_int: 'prevalence_int1'
+        prevalence_bau: 'prevalence'
+        register_rr: False
+        arcs:
+            cs: ['cscv', 'qsqv_1', 'qscv_1']
+            cscv: ['cs', 'qsqv_1', 'qscv_1']
+            fscv: ['cs', 'fsfv']
+            ns: ['cs', 'cscv', 'nscv']
+            nscv: ['cs', 'cscv', 'nsqv_1']
+            nsqv_1: ['nsqv_2']
+            nsqv_10: ['nsqv_11']
+            nsqv_11: ['nsqv_12']
+            nsqv_12: ['nsqv_13']
+            nsqv_13: ['nsqv_14']
+            nsqv_14: ['nsqv_15']
+            nsqv_15: ['nsqv_16']
+            nsqv_16: ['nsqv_17']
+            nsqv_17: ['nsqv_18']
+            nsqv_18: ['nsqv_19']
+            nsqv_19: ['nsfv']
+            nsqv_2: ['nsqv_3']
+            nsqv_3: ['nsqv_4']
+            nsqv_4: ['nsqv_5']
+            nsqv_5: ['nsqv_6']
+            nsqv_6: ['nsqv_7']
+            nsqv_7: ['nsqv_8']
+            nsqv_8: ['nsqv_9']
+            nsqv_9: ['nsqv_10']
+            qscv_1: ['cs', 'qsqv_2', 'qscv_2']
+            qscv_10: ['cs', 'qsqv_11', 'qscv_11']
+            qscv_11: ['cs', 'qsqv_12', 'qscv_12']
+            qscv_12: ['cs', 'qsqv_13', 'qscv_13']
+            qscv_13: ['cs', 'qsqv_14', 'qscv_14']
+            qscv_14: ['cs', 'qsqv_15', 'qscv_15']
+            qscv_15: ['cs', 'qsqv_16', 'qscv_16']
+            qscv_16: ['cs', 'qsqv_17', 'qscv_17']
+            qscv_17: ['cs', 'qsqv_18', 'qscv_18']
+            qscv_18: ['cs', 'qsqv_19', 'qscv_19']
+            qscv_19: ['cs', 'fscv']
+            qscv_2: ['cs', 'qsqv_3', 'qscv_3']
+            qscv_3: ['cs', 'qsqv_4', 'qscv_4']
+            qscv_4: ['cs', 'qsqv_5', 'qscv_5']
+            qscv_5: ['cs', 'qsqv_6', 'qscv_6']
+            qscv_6: ['cs', 'qsqv_7', 'qscv_7']
+            qscv_7: ['cs', 'qsqv_8', 'qscv_8']
+            qscv_8: ['cs', 'qsqv_9', 'qscv_9']
+            qscv_9: ['cs', 'qsqv_10', 'qscv_10']
+            qsqv_1: ['qsqv_2']
+            qsqv_10: ['qsqv_11']
+            qsqv_11: ['qsqv_12']
+            qsqv_12: ['qsqv_13']
+            qsqv_13: ['qsqv_14']
+            qsqv_14: ['qsqv_15']
+            qsqv_15: ['qsqv_16']
+            qsqv_16: ['qsqv_17']
+            qsqv_17: ['qsqv_18']
+            qsqv_18: ['qsqv_19']
+            qsqv_19: ['fsfv']
+            qsqv_2: ['qsqv_3']
+            qsqv_3: ['qsqv_4']
+            qsqv_4: ['qsqv_5']
+            qsqv_5: ['qsqv_6']
+            qsqv_6: ['qsqv_7']
+            qsqv_7: ['qsqv_8']
+            qsqv_8: ['qsqv_9']
+            qsqv_9: ['qsqv_10']
+            fsfv: []
+            nsfv: []
+        affects:
+            - bladder_cancer
+            - cervical_cancer
+            - lrti
+        #rr_ignore:
+        #    - dead
+    time:
+        start:
+            year: 2021
+        end:
+            year: 2131
+        step_size: 365.25 # In days
+    magic_wand_flow_register:
+        circuit.flow.ns_cs: 1
+        circuit.flow.ns_cscv: 1
+        circuit.flow.cs_qscv_1: 1
+        circuit.flow.cs_qsqv_1: 1
+        circuit.flow.cscv_qscv_1: 1
+        circuit.flow.cscv_qsqv_1: 1
+    magic_wand:
+        wand01:
+            target: 'circuit.flow.ns_cs'
+            rate_reduce: 0.25
+            year_start: 2023
+            year_end: 2024
+        wand02:
+            target: 'circuit.flow.ns_cs'
+            rate_reduce: 0.0625
+            year_start: 2024
+            year_end: 2025
+        wand03:
+            target: 'circuit.flow.ns_cs'
+            rate_reduce: 0.016
+            year_start: 2025
+        wand04:
+            target: 'circuit.flow.ns_cscv'
+            rate_reduce: 0.25
+            year_start: 2023
+            year_end: 2024
+        wand05:
+            target: 'circuit.flow.ns_cscv'
+            rate_reduce: 0.0625
+            year_start: 2024
+            year_end: 2025
+        wand06:
+            target: 'circuit.flow.ns_cscv'
+            rate_reduce: 0.016
+            year_start: 2025
+        ceaseinc01:
+            target: 'circuit.flow.cs_qscv_1'
+            set_rate: 0.167
+            year_start: 2023
+        ceaseinc02:
+            target: 'circuit.flow.cs_qsqv_1'
+            set_rate: 0.167
+            year_start: 2023
+        ceaseinc03:
+            target: 'circuit.flow.cscv_qscv_1'
+            set_rate: 0.167
+            year_start: 2023
+        ceaseinc04:
+            target: 'circuit.flow.cscv_qsqv_1'
+            set_rate: 0.167
+            year_start: 2023
+    observer:
+        output_prefix: results/output_0.005

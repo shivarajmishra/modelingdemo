@@ -1,0 +1,25 @@
+=== Prevalence Files ===
+
+Dimensions:
+	agecategory is per age in groups 0-19, 20-44, 45+, but where 0-19 is always zero so the row is omitted.
+
+Direct inputs.
+	cs                /agecategory
+	nscv              /agecategory
+	cscv              /agecategory
+
+Parameter inputs.
+	totalFSFV         /agecategory
+	totalFSCV         /agecategory
+	totalNSFV         /agecategory
+
+Derivations:
+
+ns such that the rows sum to 1.
+
+Tunnels states are populated /age as follows, using QSQV_x as an example:
+ * Let S be the set {state_1, stat_2, ..., state_(age - 19)}.
+ * Split the value totalFSFV uniformly between the states in S.
+ * Set QSQV_x to state_x, if state_x exists, otherwise set it to 0, for all x.
+ * Set FSFV to the sum of state_n for n >= 20.
+Note that we populate up to state_(age - 19) because totalFSFV may be non-zero for age 20, so S must be nonempty or we would lose mass.

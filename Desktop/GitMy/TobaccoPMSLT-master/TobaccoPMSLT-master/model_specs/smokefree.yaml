@@ -1,0 +1,169 @@
+components:
+    mslt:
+        components:
+            circuit:
+                - Circuit()
+            population:
+                - BasePopulation()
+                - Mortality()
+                - Disability()
+                - Expenditure()
+                - Income()
+            disease:
+                - Disease('bladder_cancer')
+                - Disease('cervical_cancer')
+                - Disease('colorectal_cancer')
+                - Disease('copd')
+                - Disease('diabetes')
+                - Disease('endometrial_cancer')
+                - Disease('ihd')
+                - Disease('kidney_cancer')
+                - Disease('liver_cancer')
+                - AcuteDisease('lrti')
+                - Disease('lung_cancer')
+                - Disease('melanoma')
+                - Disease('mouth_oropharynx_cancer')
+                - Disease('oesophagus_cancer')
+                - Disease('pancreas_cancer')
+                - Disease('stomach_cancer')
+                - Disease('stroke')
+                - Disease('thyroid_cancer')
+            magic_wand_components:
+                - GenericWand('smokefree_ns_nscv_maori')
+                - GenericWand('smokefree_ns_cscv_maori')
+                - GenericWand('smokefree_ns_cs_maori')
+            observer:
+                - MorbidityMortality()
+                - Circuit()
+
+configuration:
+    expenditure: True
+    income: True
+    input_data:
+        artifact_path: ../artifacts/pmslt_artifact.hdf
+        input_draw_number: 0
+        location: ''
+    interpolation:
+        validate: False
+    population:
+        # The population size here is the number of cohorts.
+        # There are 110 age bins (0-1, 1-2, ..., 108-109) for females and for
+        # males for each strata, making a total of 440 cohorts.
+        population_size: 440
+        max_age: 110
+        strata: ['maori', 'non-maori']
+    circuit:
+        prevalence_int: 'prevalence'
+        prevalence_bau: 'prevalence'
+        register_rr: False
+        arcs:
+            cs: ['cscv', 'qsqv_1', 'qscv_1']
+            cscv: ['cs', 'qsqv_1', 'qscv_1']
+            fscv: ['cs', 'fsfv']
+            ns: ['cs', 'cscv', 'nscv']
+            nscv: ['cs', 'cscv', 'nsqv_1']
+            nsqv_1: ['nsqv_2']
+            nsqv_10: ['nsqv_11']
+            nsqv_11: ['nsqv_12']
+            nsqv_12: ['nsqv_13']
+            nsqv_13: ['nsqv_14']
+            nsqv_14: ['nsqv_15']
+            nsqv_15: ['nsqv_16']
+            nsqv_16: ['nsqv_17']
+            nsqv_17: ['nsqv_18']
+            nsqv_18: ['nsqv_19']
+            nsqv_19: ['nsfv']
+            nsqv_2: ['nsqv_3']
+            nsqv_3: ['nsqv_4']
+            nsqv_4: ['nsqv_5']
+            nsqv_5: ['nsqv_6']
+            nsqv_6: ['nsqv_7']
+            nsqv_7: ['nsqv_8']
+            nsqv_8: ['nsqv_9']
+            nsqv_9: ['nsqv_10']
+            qscv_1: ['cs', 'qsqv_2', 'qscv_2']
+            qscv_10: ['cs', 'qsqv_11', 'qscv_11']
+            qscv_11: ['cs', 'qsqv_12', 'qscv_12']
+            qscv_12: ['cs', 'qsqv_13', 'qscv_13']
+            qscv_13: ['cs', 'qsqv_14', 'qscv_14']
+            qscv_14: ['cs', 'qsqv_15', 'qscv_15']
+            qscv_15: ['cs', 'qsqv_16', 'qscv_16']
+            qscv_16: ['cs', 'qsqv_17', 'qscv_17']
+            qscv_17: ['cs', 'qsqv_18', 'qscv_18']
+            qscv_18: ['cs', 'qsqv_19', 'qscv_19']
+            qscv_19: ['cs', 'fscv']
+            qscv_2: ['cs', 'qsqv_3', 'qscv_3']
+            qscv_3: ['cs', 'qsqv_4', 'qscv_4']
+            qscv_4: ['cs', 'qsqv_5', 'qscv_5']
+            qscv_5: ['cs', 'qsqv_6', 'qscv_6']
+            qscv_6: ['cs', 'qsqv_7', 'qscv_7']
+            qscv_7: ['cs', 'qsqv_8', 'qscv_8']
+            qscv_8: ['cs', 'qsqv_9', 'qscv_9']
+            qscv_9: ['cs', 'qsqv_10', 'qscv_10']
+            qsqv_1: ['qsqv_2']
+            qsqv_10: ['qsqv_11']
+            qsqv_11: ['qsqv_12']
+            qsqv_12: ['qsqv_13']
+            qsqv_13: ['qsqv_14']
+            qsqv_14: ['qsqv_15']
+            qsqv_15: ['qsqv_16']
+            qsqv_16: ['qsqv_17']
+            qsqv_17: ['qsqv_18']
+            qsqv_18: ['qsqv_19']
+            qsqv_19: ['fsfv']
+            qsqv_2: ['qsqv_3']
+            qsqv_3: ['qsqv_4']
+            qsqv_4: ['qsqv_5']
+            qsqv_5: ['qsqv_6']
+            qsqv_6: ['qsqv_7']
+            qsqv_7: ['qsqv_8']
+            qsqv_8: ['qsqv_9']
+            qsqv_9: ['qsqv_10']
+            fsfv: []
+            nsfv: []
+        affects:
+            - bladder_cancer
+            - cervical_cancer
+            - colorectal_cancer
+            - copd
+            - diabetes
+            - endometrial_cancer
+            - ihd
+            - kidney_cancer
+            - liver_cancer
+            - lrti
+            - lung_cancer
+            - melanoma
+            - mouth_oropharynx_cancer
+            - oesophagus_cancer
+            - pancreas_cancer
+            - stomach_cancer
+            - stroke
+            - thyroid_cancer
+        #rr_ignore:
+        #    - dead
+    time:
+        start:
+            year: 2021
+        end:
+            year: 2131
+        step_size: 365.25 # In days
+    magic_wand_flow_register:
+        circuit.flow.ns_cs: 1
+        circuit.flow.ns_cscv: 1
+        circuit.flow.ns_nscv: 1
+    magic_wand:
+        smokefree_ns_nscv_maori:
+            target: 'circuit.flow.ns_nscv'
+            set_rate: 0
+            year_start: 2022
+        smokefree_ns_cscv_maori:
+            target: 'circuit.flow.ns_cscv'
+            set_rate: 0
+            year_start: 2022
+        smokefree_ns_cs_maori:
+            target: 'circuit.flow.ns_cs'
+            set_rate: 0
+            year_start: 2022
+    observer:
+        output_prefix: results/smokefree

@@ -1,0 +1,31 @@
+=== Relative Risk Files ===
+
+Dimensions:
+	sex
+	age from 0 to 109
+
+Direct inputs.
+	cs      /age/sex
+	nscv    /age/sex
+	cscv    /age/sex
+
+Parameter inputs.
+	Smoker_C  dimensionless
+	Smoker_N  dimensionless
+	Vaper_C   dimensionless
+	Vaper_N   dimensionless
+	DecayAge  dimensionless
+
+Derivations:
+
+(ns) equal to 1.
+
+(QSQV_x) is 1 + (CS - 1) * e^-(gamma(age, Smoker_C, Smoker_N) * x)
+(QSCV_x) is 1 + (CSCV - 1) * e^-(gamma(age, Smoker_C, Smoker_N) * x)
+(NSQV_x) is 1 + (NSCV - 1) * e^-(gamma(age, Vaper_C, Vaper_N) * x)
+
+fsfv is 1 + (CS - 1) * e^-(gamma(age, Smoker_C, Smoker_N) * 20)
+fscv is 1 + (CSCV - 1) * e^-(gamma(age, Smoker_C, Smoker_N) * 20)
+nsfv is 1 + (NSCV - 1) * e^-(gamma(age, Vaper_C, Vaper_N) * 20)
+
+gamma(age, C, N) = C * e^-(N * max(0, age - DecayAge))

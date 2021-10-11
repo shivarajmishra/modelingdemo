@@ -1,0 +1,46 @@
+=== Flow Files ===
+
+Dimensions:
+	ageStrata is per age in groups 0-19, 20-44, 45+, but where 0-19 is always zero so the row is omitted.
+	sex
+
+Direct inputs.
+	(CS -> QSQV_1)       /ageStrata
+	(CS -> QSCV_1)       /ageStrata
+	(CS -> CSCV)         /ageStrata
+	(CSCV -> QSQV_1)     /ageStrata
+	(CSCV -> QSCV_1)     /ageStrata
+	(CSCV -> CS)         /ageStrata
+	(NSCV -> NSQV_1)     /ageStrata
+	(NSCV -> CSCV)       /ageStrata
+	(NSCV -> CS)         /ageStrata
+	(FSCV -> FSFV)       /ageStrata
+	(FSCV -> CS)         /ageStrata
+
+Parameter inputs.
+	QuitVapeProp         dimensionless
+	UptakeProp           /sex
+	UptakePropAPC        dimensionless
+	UptakePropBoth       /sex
+	UptakePropBothAPC    dimensionless
+	UptakeVaping         /sex
+	UptakeVapingAPC      dimensionless
+	QuitSmokingRelapse   /ageStrata
+
+Derivations:
+
+(QSCV_x -> QSQV_x+1) equal to QuitVapeProp for all x.
+(QSCV_x -> CS) equal to QuitSmokingRelapse for all x.
+(QSCV_x -> QSCV_x+1) set to whatever makes the row sum to 1.
+
+(QSCV_x -> QSQV_x+1) equal to 1 for all x.
+(NSQV_x -> NSQV_x+1) equal to 1 for all x.
+
+(NS -> CS) zero for ages != 20, otherwise UptakeProp.
+(NS -> CS)_APC equal to UptakePropAPC.
+
+(NS -> CSCV) zero for ages != 20, otherwise UptakePropBoth.
+(NS -> CSCV)_APC equal to UptakePropBothAPC.
+
+(NS -> NSCV) zero for ages != 20, otherwise UptakeVaping.
+(NS -> NSCV)_APC equal to UptakeVapingAPC.
